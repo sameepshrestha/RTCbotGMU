@@ -1,0 +1,3 @@
+SensorData.imu max_size: 1
+SensorData.gps max_size: 1
+Command.type max_size: 16
