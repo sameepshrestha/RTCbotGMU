@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pi Robot Control</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        video { background: #222; width: 640px; height: 480px; border: 1px solid #444; margin-bottom: 10px; }
+        .controls button { font-size: 1em; padding: 10px 20px; margin: 5px; min-width: 80px; cursor: pointer; }
+        #status-box { 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            width: 640px; 
+            text-align: left;
+            margin-bottom: 10px;
+        }
+        #status, #sensor-data, #robot-data { 
+            font-family: monospace; 
+            font-size: 14px; 
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-Time Robot Control</h1>
+    
+    <div id="video-container">
+        <video id="video" autoplay playsinline></video>
+    </div>
+
+    <div id="status-box">
+        <div id="status">Status: Waiting to start...</div>
+        
+        <!-- THIS IS THE NEW PART -->
+        <!-- This new div will display the data from the Arduino. -->
+        <div id="robot-data">Robot Data: Waiting...</div>
+
+        <!-- This is where the IMU data will be displayed -->
+        <div id="sensor-data">Sensor Data: Waiting...</div>
+    </div>
+
+    <div class="controls">
+        <button id="startBtn">Start</button>
+        <button id="stopBtn" disabled>Stop</button>
+    </div>
+
+    <div class="controls" id="d-pad">
+        <table>
+            <tr><td></td><td><button id="upBtn" disabled>Up</button></td><td></td></tr>
+            <tr>
+                <td><button id="leftBtn" disabled>Left</button></td>
+                <td style="width: 80px;"></td> <!-- Spacer -->
+                <td><button id="rightBtn" disabled>Right</button></td>
+            </tr>
+            <tr><td></td><td><button id="downBtn" disabled>Down</button></td><td></td></tr>
+        </table>
+    </div>
+
+    <!-- SCRIPT LOADING -->
+    <!-- You must have the protobuf.js library for this to work. -->
+    <!-- The CDN link is fine for development. -->
+    <script src="https://cdn.jsdelivr.net/npm/protobufjs@7.2.5/dist/protobuf.min.js"></script>
+    
+    <!-- This loads your main application logic. Make sure the path is correct. -->
+    <script src="/client_direct.js"></script>
+
+</body>
+</html>

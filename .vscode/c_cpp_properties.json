@@ -1,0 +1,60 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
+{
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "/home/Raspberry/pi_project/include",
+                "/home/Raspberry/pi_project/src",
+                "/home/Raspberry/pi_project/.pio/libdeps/megaatmega2560/Servo/src",
+                "/home/Raspberry/pi_project/.pio/libdeps/megaatmega2560/Nanopb",
+                "/home/Raspberry/.platformio/packages/framework-arduino-avr/cores/arduino",
+                "/home/Raspberry/.platformio/packages/framework-arduino-avr/variants/mega",
+                "/home/Raspberry/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                "/home/Raspberry/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                "/home/Raspberry/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                "/home/Raspberry/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                "/home/Raspberry/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "/home/Raspberry/pi_project/include",
+                    "/home/Raspberry/pi_project/src",
+                    "/home/Raspberry/pi_project/.pio/libdeps/megaatmega2560/Servo/src",
+                    "/home/Raspberry/pi_project/.pio/libdeps/megaatmega2560/Nanopb",
+                    "/home/Raspberry/.platformio/packages/framework-arduino-avr/cores/arduino",
+                    "/home/Raspberry/.platformio/packages/framework-arduino-avr/variants/mega",
+                    "/home/Raspberry/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
+                    "/home/Raspberry/.platformio/packages/framework-arduino-avr/libraries/HID/src",
+                    "/home/Raspberry/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
+                    "/home/Raspberry/.platformio/packages/framework-arduino-avr/libraries/SoftwareSerial/src",
+                    "/home/Raspberry/.platformio/packages/framework-arduino-avr/libraries/Wire/src",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=60118",
+                "ARDUINO_AVR_MEGA2560",
+                "F_CPU=16000000L",
+                "ARDUINO_ARCH_AVR",
+                "ARDUINO=10808",
+                "__AVR_ATmega2560__",
+                ""
+            ],
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++11",
+            "compilerPath": "/home/Raspberry/.platformio/packages/toolchain-atmelavr/bin/avr-gcc",
+            "compilerArgs": [
+                "-mmcu=atmega2560",
+                ""
+            ]
+        }
+    ],
+    "version": 4
+}

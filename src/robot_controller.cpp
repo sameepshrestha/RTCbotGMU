@@ -33,7 +33,7 @@ void setup() {
   initServos();
   write_servos();
   delay(1500);
-  Serial.println("Initialization Complete");
+  // Serial.println("Initialization Complete");
   wdt_enable(WDTO_250MS);
   wdt_reset();
 }
@@ -59,7 +59,7 @@ void loop() {
   write_servos();
 
   if (timeNow - prevStatus >= proto_comms::send_interval) {
-    // proto_comms::send_robot_status();
+    proto_comms::send_robot_status();
     prevStatus = timeNow;
   }
 

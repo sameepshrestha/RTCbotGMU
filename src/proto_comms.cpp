@@ -71,7 +71,7 @@ namespace proto_comms {
           expected_len = (len_buf[0] << 8) | len_buf[1];
           if (expected_len == 0 || expected_len > sizeof(buffer)) {
             // Serial.print("Error: Invalid length received: ");
-            Serial.println(expected_len);
+            // Serial.println(expected_len);
             state = STATE_WAITING_FOR_LEN_1;
           } else {
             bytes_received = 0;
