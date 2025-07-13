@@ -15,6 +15,8 @@ import serial
 import robot_messages_pb2
 from collections import deque
 import struct
+import pynmea2
+from datetime import datetime, date
 
 ROOT = os.path.dirname(__file__)
 HOST = "0.0.0.0"
@@ -23,6 +25,78 @@ logging.basicConfig(level=logging.INFO)
 connections = {}
 serial_queue = deque(maxlen=100)
 
+class GpsHandler:
+    def __init__(self):
+        self.ser = serial.Serial('/dev/ttyACM1', 115200, timeout=0.5)  # Adjust port/baudrate
+        self.ser.reset_input_buffer()
+        self.latest_gps = {"lat": 0.0, "lon": 0.0, "alt": 0.0, "timestamp": 0.0}
+        self.lock = threading.Lock()
+        self._is_stopped = threading.Event()
+        self._thread = threading.Thread(target=self._read_gps, daemon=True)
+        self._packet_count = 0
+        self._start_time = time.time()
+        self._last_rate_log = self._start_time
+        self._thread.start()
+
+    def _utc_to_epoch(self, utc_time, date_source=None):
+        if utc_time is None:
+            return time.time()
+        current_date = date_source or date.today()
+        try:
+            dt = datetime.combine(current_date, utc_time)
+            return dt.timestamp()
+        except Exception as e:
+            logging.warning(f"Failed to convert UTC to epoch: {e}, using system time")
+            return time.time()
+
+    def _read_gps(self):
+        logging.info("GPS reader thread started.")
+        buffer = b''
+        last_date = None
+        while not self._is_stopped.is_set():
+            try:
+                buffer += self.ser.read(self.ser.in_waiting or 1)
+                lines = buffer.split(b'\n')
+                buffer = lines[-1] if lines else b''
+                for line in lines[:-1]:
+                    line = line.decode('ascii', errors='ignore').strip()
+                    if line.startswith('$'):
+                        try:
+                            msg = pynmea2.parse(line)
+                            if isinstance(msg, pynmea2.types.GGA):
+                                with self.lock:
+                                    self.latest_gps = {
+                                        "lat": msg.latitude if msg.latitude else 0.0,
+                                        "lon": msg.longitude if msg.longitude else 0.0,
+                                        "alt": msg.altitude if msg.altitude else 0.0,
+                                        "timestamp": self._utc_to_epoch(msg.timestamp, last_date)
+                                    }
+                                    self._packet_count += 1
+                                    logging.info(f"GPS Data: Epoch={self.latest_gps['timestamp']:.3f}s, "
+                                                f"Lat={self.latest_gps['lat']:.6f}, Lon={self.latest_gps['lon']:.6f}, "
+                                                f"Alt={self.latest_gps['alt']:.1f}m, Satellites={msg.num_sats}")
+                            elif isinstance(msg, pynmea2.types.RMC):
+                                last_date = msg.datestamp
+                        except pynmea2.ParseError:
+                            logging.warning(f"Failed to parse NMEA sentence: {line}")
+                current_time = time.time()
+                if current_time - self._last_rate_log >= 5:
+                    rate = self._packet_count / (current_time - self._start_time) if (current_time - self._start_time) > 0 else 0
+                    logging.info(f"Average GPS data rate: {rate:.2f} Hz, Packets: {self._packet_count}")
+                    self._last_rate_log = current_time
+            except Exception as e:
+                logging.warning(f"GPS serial read error: {e}")
+                time.sleep(0.1)
+
+    def get_latest_gps(self):
+        with self.lock:
+            return self.latest_gps.copy()
+
+    def stop(self):
+        self._is_stopped.set()
+        self._thread.join(timeout=1)
+        self.ser.close()
+        logging.info("GPS handler stopped")
 
 def parse_data(frame):
     """Parses a 11-byte data frame from the WitMotion sensor."""
@@ -57,7 +131,7 @@ class ArduinoHandler:
     """A dedicated handler using efficient blocking reads."""
     def __init__(self, data_queue):
         # IMPORTANT: Double-check this device name!
-        self.ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
+        self.ser = serial.Serial('/dev/ttyACM0', 115200, timeout=.2)
         self.ser.flushInput()
         self.data_queue = data_queue
         self._is_stopped = threading.Event()
@@ -113,12 +187,12 @@ class ArduinoHandler:
         logging.info("Arduino handler stopped.")
 
 class SensorHandler:
-    def __init__(self, data_queue):
-        self.witmotion_ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
+    def __init__(self, data_queue, gps_handler):
+        self.witmotion_ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=.2)
         self.witmotion_ser.reset_input_buffer()
         self.data_queue = data_queue
         self.current_sequence_state = {}
-
+        self.gps_handler = gps_handler
         self.packet_timestamps = {}
         self.received_since_last_send = set()
         self.lock = threading.Lock()
@@ -160,9 +234,12 @@ class SensorHandler:
                                 sensor_pb.imu.gyro_x = state.get('gyro_x', 0.0)
                                 sensor_pb.imu.gyro_y = state.get('gyro_y', 0.0)
                                 sensor_pb.imu.gyro_z = state.get('gyro_z', 0.0)
-                                sensor_pb.gps.lat = state.get('roll',0.0)
-                                sensor_pb.gps.lon = state.get('pitch', 0.0)
-                                sensor_pb.gps.alt = state.get('yaw', 0.0)
+                                gps_data = self.gps_handler.get_latest_gps()
+                                sensor_pb.gps.lat = gps_data['lat']
+                                sensor_pb.gps.lon = gps_data['lon']
+                                sensor_pb.gps.alt = gps_data['alt']
+                                # sensor_pb.gps.timestamp = gps_data['timestamp']
+                                # sensor_pb.gps.alt = state.get('yaw', 0.0)
                                 self.data_queue.append(sensor_pb.SerializeToString())
                                 self.received_since_last_send.clear()
                                 self.packet_timestamps.clear()
@@ -296,8 +373,9 @@ async def offer(request):
     pc_id = f"pc-{uuid.uuid4()}"
     video_track = RobustPiCameraTrack()
     video_track.start()
+    gps_handler = GpsHandler()
     arduino_handler = ArduinoHandler(serial_queue)
-    serial_handler = SensorHandler(serial_queue)
+    serial_handler = SensorHandler(serial_queue, gps_handler)
     data_channel = pc.createDataChannel("protobuf", ordered=False, maxRetransmits=0)
     connections[pc_id] = (pc, video_track, serial_handler, arduino_handler)
 
